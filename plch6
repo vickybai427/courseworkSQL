@@ -1,0 +1,255 @@
+4.
+CREATE OR REPLACE FUNCTION day_ord_sf
+(date_created bb_basket.dtcreated%type)
+RETURN varchar2
+IS
+week_day varchar2(10);
+BEGIN  -- using to_char and 'fmDay' to format
+  week_day := to_char(date_created, 'fmDay');
+  RETURN week_day;
+END;
+/
+
+SELECT idbasket "Basket #",
+lpad(day_ord_sf(dtcreated), 11) "Day Created"
+FROM bb_basket;
+
+SELECT distinct lpad(day_ord_sf(dtcreated), 11) "Day of Week",
+       count(day_ord_sf(dtcreated)) "# of Orders"
+FROM bb_basket
+group by (day_ord_sf(dtcreated));
+
+
+5.
+CREATE OR REPLACE FUNCTION ORD_SHIP_SF
+(PARAM_ID IN BB_BASKET.IDBASKET%TYPE)
+RETURN VARCHAR
+IS
+STAGE BB_BASKETSTATUS.IDSTAGE%TYPE;
+ORDER_DATE BB_BASKET.DTORDERED%TYPE;
+SHIPPED_DATE BB_BASKETSTATUS.DTSTAGE%TYPE;
+MESSAGE CHAR(20);
+DIFF_DATE NUMBER(10);
+BEGIN
+SELECT MAX(IDSTAGE) INTO STAGE FROM BB_BASKETSTATUS
+    WHERE IDBASKET = PARAM_ID;
+SELECT DTORDERED INTO ORDER_DATE FROM BB_BASKET
+    WHERE IDBASKET = PARAM_ID;
+SELECT DTSTAGE INTO SHIPPED_DATE FROM BB_BASKETSTATUS
+    WHERE IDBASKET = PARAM_ID AND IDSTAGE = STAGE;
+IF STAGE != 5 THEN
+    MESSAGE := 'NOT SHIPPED';
+ELSE
+    DIFF_DATE := SHIPPED_DATE - ORDER_DATE;
+    IF DIFF_DATE <= 1 THEN
+        MESSAGE := 'OK';
+    ELSE
+        MESSAGE := 'CHECK';
+    END IF;
+END IF;
+RETURN MESSAGE;
+END;
+/
+
+BEGIN
+DBMS_OUTPUT.PUT_LINE(ORD_SHIP_SF(3));
+END;
+/
+
+
+6.
+CREATE OR REPLACE FUNCTION status_desc_sf
+(stage_id bb_basketstatus.idstage%type)
+RETURN VARCHAR2
+IS
+description varchar2(26);
+BEGIN
+  IF (stage_id = 1) THEN
+    description := 'Order submitted';
+  ELSIF (stage_id = 2) THEN
+    description := 'Accepted, sent to shipping';
+  ELSIF (stage_id = 3) THEN
+    description := 'Backordered';
+  ELSIF (stage_id = 4) THEN
+    description := 'Cancelled';
+  ELSE
+    description := 'Shipped';
+  END IF;
+  return description;
+END;
+/
+SELECT dtstage, rpad(status_desc_sf(idstage), 26) "Status Description"
+FROM bb_basketstatus
+WHERE idbasket = 4;
+
+
+7.
+CREATE OR REPLACE FUNCTION tax_calc_sf
+(p_id IN NUMBER)
+RETURN NUMBER 
+IS
+tax_num NUMBER(7,2);
+BEGIN
+SELECT B.subtotal*T.TAXRATE
+INTO tax_num
+FROM bb_basket B, bb_tax T
+WHERE B.SHIPSTATE = T.STATE
+AND B.IDBASKET = P_ID;
+RETURN tax_num;
+EXCEPTION
+WHEN NO_DATA_FOUND THEN
+tax_num :=0;
+RETURN tax_num;
+END;
+/
+SELECT TAX_CALC_SF(IDBASKET)
+FROM BB_BASKET where idbasket = 4;
+
+
+
+8.
+CREATE OR REPLACE FUNCTION CK_SALE_SF
+(P_DATE DATE,
+P_IDPRODUCT NUMBER)
+RETURN VARCHAR2
+IS 
+START_DATE DATE;
+END_DATE DATE;
+TXT VARCHAR2(50);
+BEGIN
+SELECT SALESTART, SALEEND
+INTO START_DATE, END_DATE
+FROM BB_PRODUCT
+WHERE IDPRODUCT = P_IDPRODUCT;
+IF P_DATE BETWEEN START_DATE AND END_DATE
+THEN TXT := 'ON SALE';
+ELSE TXT := 'GRATE DEAL!';
+END IF;
+RETURN TXT;
+END;
+/
+DECLARE
+BLOCK_TEST VARCHAR2(50);
+BEGIN
+BLOCK_TEST := CK_SALE_SF('10-JUN-12',6);
+DBMS_OUTPUT.PUT_LINE(BLOCK_TEST);
+END;
+/
+DECLARE
+BLOCK_TEST VARCHAR2(50);
+BEGIN
+BLOCK_TEST := CK_SALE_SF('19-JUN-12',6);
+DBMS_OUTPUT.PUT_LINE(BLOCK_TEST);
+END;
+/
+
+
+9.
+
+CREATE OR REPLACE FUNCTION dd_mthpay_sf
+(p_pledge_amt IN NUMBER,
+p_paymonth IN NUMBER)
+RETURN NUMBER
+IS
+lv_monthly_pamt NUMBER;
+BEGIN
+IF p_paymonth > 0 THEN
+lv_monthly_pamt := (p_pledge_amt / p_paymonth);
+ELSE
+lv_monthly_pamt := 0;
+END IF;
+RETURN lv_monthly_pamt;
+END;
+/
+
+BEGIN
+dbms_output.put_line(dd_mthpay_sf(240, 12));
+END;
+/
+
+SELECT d.firstname, d.lastname, p.idpledge, dd_mthpay_sf(p.pledgeamt, p.paymonths) payment
+FROM dd_donor d, dd_pledge p
+WHERE d.iddonor = p.iddonor;
+
+10.
+CREATE OR REPLACE FUNCTION DD_PROJTOT_SF 
+(P_IDPROJECT NUMBER) 
+RETURN NUMBER 
+IS
+TOTAL_PLEDGE NUMBER(7,2);
+BEGIN
+SELECT SUM(PLEDGEAMT) 
+INTO TOTAL_PLEDGE  
+FROM DD_PLEDGE  
+WHERE IDPROJ = P_IDPROJECT;
+RETURN TOTAL_PLEDGE;       
+END;
+/
+SELECT IDPROJ,PROJNAME,TO_CHAR(NVL(DD_PROJTOT_SF(IDPROJ),0),'00,99.00')
+FROM DD_PROJECT;
+
+
+11.
+CREATE OR REPLACE FUNCTION DD_PLSTAT_SF
+(P_IDSATTUS IN number)  
+RETURN varchar2
+IS
+DESC_STATUS varchar2(100);
+BEGIN
+IF P_IDSATTUS = 10 THEN
+DESC_STATUS := 'Open';
+ELSIF P_IDSATTUS = 20 THEN
+DESC_STATUS := 'Complete';
+ELSIF P_IDSATTUS = 30 THEN
+DESC_STATUS := 'Overdue';
+ELSIF P_IDSATTUS = 40 THEN
+DESC_STATUS := 'Closed';
+ELSIF P_IDSATTUS= 50 THEN
+DESC_STATUS := 'Hold';
+END IF;  
+RETURN DESC_STATUS;
+END;
+/
+
+Query:
+
+SELECT idPledge , Pledgedate, idStatus, DD_PLSTAT_SF(idStatus)
+FROM DD_Pledge;
+
+SELECT idPledge , Pledgedate, DD_PLSTAT_SF(idStatus)
+FROM DD_Pledge
+
+WHERE idPledge = 100
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

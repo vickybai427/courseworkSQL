@@ -1,0 +1,136 @@
+5.
+DECLARE
+g_total NUMBER(3) := 100;
+g_prod NUMBER(2) := 4;
+lv_qty_num NUMBER(3) := 0;
+lv_amt_num NUMBER(5,2) := 0;
+lv_price_num bb_product.price%TYPE;
+BEGIN
+SELECT 
+price
+INTO lv_price_num
+FROM bb_product
+WHERE idProduct = :g_prod;
+WHILE lv_price_num < (:g_total-lv_amt_num) 
+LOOP
+lv_qty_num := lv_qty_num + 1;
+lv_amt_num := lv_qty_num * lv_price_num;
+END LOOP;
+DBMS_OUTPUT.PUT_LINE('QUANTITY = '||lv_qty_num);
+DBMS_OUTPUT.PUT_LINE('AMOUNT = '||lv_amt_num); 
+END;
+/
+
+
+8.
+DECLARE
+  g_bask NUMBER(3) := 12;
+  basket bb_basket.idbasket%TYPE;
+  sub bb_basket.subtotal%TYPE;
+  ship bb_basket.shipping%TYPE;
+  tax bb_basket.tax%TYPE;
+  total bb_basket.total%TYPE;
+    
+BEGIN
+SELECT idbasket, subtotal, shipping, tax, total
+  INTO basket, sub, ship,
+        tax, total
+  FROM bb_basket
+  WHERE idbasket = :g_bask;
+  DBMS_OUTPUT.PUT_LINE('Basket ' || basket || ' has a subtotal of' || to_char(sub, '$99.99')
+  || ', shipping is' || to_char(ship, '$99.99') || ','  || chr(10) || '          tax is'
+  || to_char(tax, '$99.99') || ', and the total is' || to_char(total, '$99.99'));
+END;
+/
+
+
+9.
+DECLARE
+proj_name dd_project.projname%type;
+proj_id dd_project.idproj%type;
+pledge_count dd_pledge.pledgeamt%type;
+pledge_average dd_pledge.pledgeamt%type;
+pledge_sum dd_pledge.pledgeamt%type;
+BEGIN
+SELECT dd_project.idproj, projname, count(pledgeamt), sum(pledgeamt), avg(pledgeamt)
+INTO proj_id, proj_name, pledge_count, pledge_sum, pledge_average
+FROM dd_pledge, dd_project
+WHERE dd_pledge.idproj = dd_project.idproj and dd_project.idproj = &proj_id
+GROUP BY dd_project.idproj, projname;
+DBMS_OUTPUT.PUT_LINE('Project ID: ' || proj_id ||' Project Name: ' || proj_name ||' Total Pledges Made: ' 
+|| pledge_count ||' Total Dollars Pledged: ' || pledge_sum||' Average Dollars Pledged: ' || pledge_average );
+END;
+/
+
+10.
+CREATE SEQUENCE dd_project_seq
+  MINVALUE 1
+  START WITH 530
+  INCREMENT BY 1
+  NOCACHE;
+  
+DECLARE
+TYPE type_project IS RECORD(
+project_name      	dd_project.projname%type := 'HK Animal Shelter Extension',
+project_start     		dd_project.projstartdate%type := '01-JAN-13',
+project_end       		dd_project.projenddate%type := '31-MAY-13',
+project_funding   	dd_project.projfundgoal%type := '65000');
+
+new_project type_project;
+
+Begin
+
+INSERT INTO 	dd_project (idproj, projname, projstartdate, projenddate, projfundgoal)
+VALUES 	(dd_project_seq.NEXTVAL, new_project.project_name, new_project.project_start, new_project.project_end, new_project.project_funding);
+commit; 
+end;
+SELECT * FROM dd_project;
+
+
+11.
+DECLARE
+  PLEDGES    			DD_PLEDGE%ROWTYPE;
+  START_MONTH_DATE       	DD_PLEDGE.PLEDGEDATE%TYPE := '01-OCT-12';
+  END_MONTH_DATE 		DD_PLEDGE.PLEDGEDATE%TYPE := '31-OCT-12';
+  
+BEGIN
+  FOR PLEDGES IN 
+  (SELECT IDPLEDGE, IDDONOR, PLEDGEAMT, PAYMONTHS,
+    CASE   WHEN PAYMONTHS = 0 THEN 'Lump Sum.'
+      ELSE 'Monthly - ' || PAYMONTHS
+      END AS MONTHLY_PAYMENT
+      FROM DD_PLEDGE
+    WHERE PLEDGEDATE >= START_MONTH_DATE AND PLEDGEDATE <= END_MONTH_DATE
+      ORDER BY PAYMONTHS)
+      
+      LOOP
+      DBMS_OUTPUT.PUT_LINE('Pledge ID: ' || PLEDGES.IDPLEDGE || ', Donor ID: '
+        || PLEDGES.IDDONOR || ', Pledge Amount: ' ||to_char(PLEDGES.PLEDGEAMT,
+        '$9999.99') || ', Monthly Payments: ' || PLEDGES. MONTHLY_PAYMENT);
+      END LOOP;
+ END;
+ /
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

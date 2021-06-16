@@ -1,0 +1,71 @@
+CREATE OR REPLACE PROCEDURE NumberTable
+(N IN number(2))
+AS
+Error EXCEPTION;
+BEGIN
+IF (N<1|| N> 50) THEN 
+RAISE NR;
+ELSE(
+	IF MOD(N,2):= 1 THEN
+		FOR I IN 1..N LOOP
+		I:= I* (I+1);
+		END LOOP;	
+		DBMS_OUTPUT.PUT_LINE('THE NUMBER IS ODD. AND THE FINAL VALUE IS : '|| I);
+		
+	ELSIF MOD(N,2):= 0 THEN
+		FOR I IN 1..N LOOP
+		I:= I+1;
+		END LOOP;	
+		DBMS_OUTPUT.PUT_LINE('THE NUMBER IS EVEN. AND THE FINAL VALUE IS : '|| I);
+	
+	END IF;)
+END IF;
+									
+EXCEPTION
+		WHEN Error THEN
+		DBMS_OUTPUT.PUT_LINE('THE NUMBER MUST BETWEEN 1 AND 50');
+END;
+/
+
+DECLARE 
+NUM NUMBER(2) := '20';
+BEGIN
+NumberTable(NUM);
+DBMS_OUTPUT.PUT_LINE(NUM);
+END;
+/
+
+
+
+
+
+CREATE OR REPLACE TRIGGER CUSTOMERS_HISTORY_trg
+AFTER DELETE OR INSERT OR UPDATE ON abc_customers
+FOR EACH ROW
+BEGIN
+	IF INSERTING THEN
+		INSERT INTO customers_history
+		VALUES(cust_hist_seq_num (cust_hist_seq.NEXTVAL),
+		:NEW.customer#,
+		:NEW.date_updated (sysdate), 
+		:NEW.operation := 'I',
+		)	
+	
+	ELSIF UPDATEING THEN
+		INSERT INTO customers_history
+		VALUES(cust_hist_seq_num (cust_hist_seq.NEXTVAL),
+		:NEW.customer#,
+		:NEW.date_updated (sysdate), 
+		:NEW.operation := 'U',
+		)
+		
+	ELSIF DELETING THEN
+		INSERT INTO customers_history
+		VALUES(cust_hist_seq_num (cust_hist_seq.NEXTVAL),
+		:OLD.customer#,
+		:OLD.date_updated (sysdate), 
+		:OLD.operation := 'D',
+		)
+	END IF;		
+END;
+/

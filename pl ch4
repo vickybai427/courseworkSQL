@@ -1,0 +1,106 @@
+CREATE OR REPLACE PROCEDURE EVEN_ODD(p_num NUMBER,p_msg OUT VARCHAR2)
+AS
+BEGIN 
+IF MOD(p_num, 2) = 0 THEN
+ p_msg := 'Even';
+ ELSE
+  p_msg := 'ODD';
+ END IF;
+ END EVEN_ODD;
+ /
+ 
+ DECLARE
+ lv_msg VARCHAR2(20);
+ BEGIN
+ EVEN_ODD(&NUMBER, lv_msg);
+  DBMS_OUTPUT.PUT_LINE(lv_msg);
+END;
+/
+
+
+Declare
+
+CURSOR PLEDGE_PAYMENT IS
+
+SELECT DD_PLEDGE.IDPLEDGE, DD_PLEDGE.PLEDGEAMT, DD_PLEDGE.PAYMONTHS, DD_PAYMENT.PAYDATE, DD_PAYMENT.PAYAMT FROM ((DD_DONOR INNER JOIN DD_PLEDGE ON DD_DONOR.IDDONOR=DD_PLEDGE.IDDONOR) INNER JOIN DD_PAYMENT on DD_PLEDGE.IDPLEDGE = DD_PAYMENT.IDPLEDGE) ORDER BY IDPLEDGE, PAYDATE.
+
+Rec_Pledge_Payment Pledge_Payment%rowtype;
+
+BEGIN
+
+OPEN PLEDGE_PAYMENT;
+
+LOOP
+
+FETCH PLEDGE_PAYMENT INTO Rec_Pledge_Payment;
+
+EXIT When PLEDGE_PAYMENT%NOTFOUND:
+
+DBMS_OUTPUT.PUT_LINE(PLEDGE_PAYMENT.IDPLEDGE||' '|| PLEDGE_PAYMENT.PLEDGEAMT||' '||PLEDGE_PAYMENT.PAYMONTHS||' '||PLEDGE_PAYMENT.PAYDATE||' '||PLEDGE_PAYMENT.PAYAMT);
+
+END LOOP;
+
+END;
+/
+
+
+
+
+
+
+
+
+DECLARE
+CURSOR cur_donor IS
+SELECT idpledge, pl.pledgeamt, pl.paymonths, py.paydate, py.payamt
+FROM dd_pledge pl INNER JOIN dd_payment py
+USING (idPledge)WHERE idDonor= 308
+ORDER BY idpledge, py.paydate;
+TYPE type_donor IS RECORD (pid dd_pledge.idpledge%TYPE,pamt dd_pledge.pledgeamt%TYPE,pmth dd_pledge.paymonths%TYPE,pdate dd_payment.paydate%TYPE,ppay dd_payment.payamt%TYPE);
+rec_donor type_donor;lv_id_num dd_pledge.idpledge%TYPE := 0;
+BEGIN
+OPEN cur_donor;
+LOOP
+FETCH cur_donor INTO rec_donor;
+EXIT WHEN cur_donor%NOTFOUND;
+IF rec_donor.pid <> lv_id_num THEN
+DBMS_OUTPUT.PUT_LINE(rec_donor.pid || ' - ' ||TO_CHAR(rec_donor.pamt,'$99,999.00') || ' - ' ||rec_donor.pmth || ' - ' ||rec_donor.pdate || ' - ' ||TO_CHAR(rec_donor.ppay,'$99,999.00') || ' - ' ||'First Payment');
+lv_id_num := rec_donor.pid;
+ELSE
+DBMS_OUTPUT.PUT_LINE(rec_donor.pid || ' - ' ||TO_CHAR(rec_donor.pamt,'$99,999.00') || ' - ' ||rec_donor.pmth || ' - ' ||rec_donor.pdate || ' - ' ||TO_CHAR(rec_donor.ppay,'$99,999.00'));
+END IF;
+END LOOP;
+CLOSE cur_donor;
+END;
+/
+
+DECLARE
+CURSOR cur_donor IS
+SELECT idpledge, pl.pledgeamt, pl.paymonths, py.paydate, py.payamt
+FROM dd_pledge pl INNER JOIN dd_payment py
+USING (idPledge)
+WHERE idDonor= 308
+ORDER BY idpledge, py.paydate;
+lv_id_num dd_pledge.idpledge%TYPE := 0;
+BEGIN
+FOR rec_donor IN cur_donor LOOP
+IF rec_donor.idpledge <> lv_id_num THEN
+DBMS_OUTPUT.PUT_LINE(rec_donor.idpledge || ' - ' ||
+TO_CHAR(rec_donor.pledgeamt,'$99,999.00') || ' - ' ||
+rec_donor.paymonths || ' - ' ||
+rec_donor.paydate || ' - ' ||
+ TO_CHAR(rec_donor.payamt,'$99,999.00') || ' - ' ||
+'First Payment');
+lv_id_num := rec_donor.idpledge;
+ELSE
+DBMS_OUTPUT.PUT_LINE(rec_donor.idpledge || ' - ' ||
+TO_CHAR(rec_donor.pledgeamt,'$99,999.00') || ' - ' ||
+rec_donor.paymonths || ' - ' ||
+rec_donor.paydate || ' - ' ||
+TO_CHAR(rec_donor.payamt,'$99,999.00'));
+END IF;
+END LOOP;
+END;
+/
+
+

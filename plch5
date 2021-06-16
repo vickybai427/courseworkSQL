@@ -1,0 +1,158 @@
+SET SERVEROUTPUT ON
+
+
+
+create or replace PROCEDURE STATUS_SHIP_SP
+(p_id IN OUT BB_BASKETSTATUS.IDSTATUS%TYPE)
+IS
+BEGIN
+p_id := BB_STATUS_SEQ.NEXTVAL;
+INSERT INTO BB_BASKETSTATUS (IDSTATUS, IDBASKET, IDSTAGE, DTSTAGE, NOTES, SHIPPER, SHIPPINGNUM)
+VALUES (p_id, '3', '3', '20-FEB-12', NULL, 'UPS', 'ZW2384YXK4957');
+COMMIT;
+END;
+/
+
+SELECT*FROM BB_BASKETSTATUS;
+
+CREATE OR REPLACE PROCEDURE status_sp
+(p_basket IN bb_basket.idbasket%TYPE,
+p_date OUT DATE,
+p_desc OUT VARCHAR2)
+IS
+CURSOR cur_status IS
+SELECT idstage, dtstage
+FROM bb_basketstatus
+WHERE idbasket = p_basket
+ORDER BY dtstage DESC;
+lv_stage_num bb_basketstatus.idstage%TYPE;
+BEGIN
+OPEN cur_status;
+FETCH cur_status INTO lv_stage_num, p_date;
+IF lv_stage_num = 1 THEN
+p_desc := 'Submitted and received';
+ELSIF lv_stage_num = 2 THEN
+p_desc := 'confirmed, processed, sent to shipping';
+ELSIF lv_stage_num = 3 THEN
+p_desc := 'Shipped';
+ELSIF lv_stage_num = 4 THEN
+p_desc := 'Cancelled';
+ELSIF lv_stage_num = 5 THEN
+p_desc := 'Backordered';
+END IF;
+EXCEPTION
+WHEN NO_DATA_FOUND THEN
+DBMS_OUTPUT.PUT_LINE('No Status Available');
+end;
+/
+
+create or replace procedure basket_add_sp
+(p_baskid IN number, p_prodid IN number,
+p_price IN number, p_qua IN number,
+p_sizecode IN number, p_formcode IN number)
+IS 
+BEGIN
+INSERT into bb_basketitem (idbasketitem,idproduct, price, quantity, idbasket, option1, option2)
+VALUES (bb_idbasketitem_seq.nextval ,p_prodid, p_price, p_qua, p_baskid, p_sizecode, p_formcode);
+COMMIT;
+END;
+/
+
+10.
+CREATE OR REPLACE PROCEDURE DDPROJ_SP
+(PROJID IN DD_PROJECT.IDPROJ%TYPE,PROJDATA OUT DD_PROJECT%ROWTYPE)
+IS
+BEGIN
+SELECT * INTO PROJDATA 
+FROM DD_PROJECT WHERE IDPROJ = PROJID;
+DBMS_OUTPUT.PUT_LINE(PROJDATA.IDPROJ || ' ' || PROJDATA.PROJNAME || ' ' || PROJDATA.PROJSTARTDATE || ' ' || PROJDATA.PROJENDDATE || ' ' || PROJDATA.PROJFUNDGOAL || ' ' || PROJDATA.PROJCOORD);
+END;
+/
+//Test for the procedure using anonymous block.
+SET SERVEROUTPUT ON;
+DECLARE SP_TEST DD_PROJECT%ROWTYPE;
+BEGIN
+DDPROJ_SP(504, SP_TEST);
+END;
+/
+
+CREATE OR REPLACE PROCEDURE DDPAY_SP
+(donor_id IN NUMBER, active_pl OUT BOOLEAN)
+IS
+pay_count NUMBER;
+result varchar2(255);
+BEGIN
+SELECT COUNT(*) INTO pay_count
+FROM dd_pledge 
+WHERE iddonor = donor_id AND idstatus = 10 AND paymonths > 1;
+IF pay_count > 1 THEN
+active_pl := TRUE;
+ELSE active_pl := FALSE;
+END IF;
+DBMS_OUTPUT.PUT_LINE('Active Pledge and paymonths: ' || CASE active_pl WHEN TRUE THEN 'true' ELSE 'false' END);
+END;
+/
+
+/*Test with Anonymous Block*/
+SET SERVEROUTPUT ON;
+DECLARE test BOOLEAN;
+BEGIN
+DDPAY_SP(301,test);
+END;
+
+12.
+CREATE OR REPLACE PROCEDURE DDCKPAY_SP
+(pledgeId IN DD_PLEDGE.IDPLEDGE%TYPE,
+payAmt IN OUT DD_PLEDGE.PLEDGEAMT%TYPE,
+pledgeTable OUT DD_PLEDGE%ROWTYPE)
+IS
+BEGIN
+SELECT *
+INTO pledgeTable
+FROM DD_PLEDGE
+WHERE IDPLEDGE = pledgeID
+AND PAYMONTHS >0;
+IF SQL%NOTFOUND THEN
+DBMS_OUTPUT.PUT_LINE('No Data was found');
+END IF;
+END; 
+/
+
+
+DECLARE
+payAmt DD_PLEDGE.PLEDGEAMT%TYPE := 20; 
+pledgeTable DD_PLEDGE%ROWTYPE;
+actual_payamt NUMBER (8,2);
+BEGIN
+DDCKPAY_SP (104,payAmt,pledgeTable);
+actual_payamt:= (pledgeTable.pledgeamt/ pledgeTable.paymonths); 
+IF payAmt != actual_payamt THEN
+RAISE_APPLICATION_ERROR(-20050, 'The given information does not match');
+ELSE
+DBMS_OUTPUT.PUT_LINE('Bingo!');
+END IF;
+END;
+/
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
